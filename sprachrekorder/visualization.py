@@ -35,6 +35,10 @@ ax.set_facecolor((0, 0, 0))  # Black background
 ax.set_yticks([0])
 ax.yaxis.grid(True)
 
+#Hard coding the position so it does not open at the same spot than the GUI
+manager = plt.get_current_fig_manager()
+manager.window.wm_geometry("+500+100")  # Set the position to X=500, Y=100 on the screen
+
 
 def audio_callback(indata, frames, time, status):
     """Callback to handle audio input."""
