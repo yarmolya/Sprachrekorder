@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog
 from audio_filters import apply_filter  # Custom utility functions
-from visualization import visualize_audio_live # Optional visualization functions
+from visualization import visualize_audio_live  # Optional visualization functions
+
 
 class VoiceModifierApp:
     def __init__(self, root):
@@ -16,6 +17,10 @@ class VoiceModifierApp:
         self.create_widgets()
 
     def create_widgets(self):
+        # File Selection Section
+        self.select_file_button = tk.Button(self.root, text="Select Audio File", command=self.select_audio_file)
+        self.select_file_button.pack(pady=10)
+
         # Recording Section
         self.record_button = tk.Button(self.root, text="Start Recording", command=self.start_recording)
         self.record_button.pack(pady=10)
@@ -25,7 +30,7 @@ class VoiceModifierApp:
         self.filter_label.pack()
         self.filter_var = tk.StringVar(self.root)
         self.filter_var.set("None")  # Default option
-        self.filter_menu = tk.OptionMenu(self.root, self.filter_var, "None", "Robot", "Echo", "High Pitch")
+        self.filter_menu = tk.OptionMenu(self.root, self.filter_var, "None", "Robot", "Echo", "High Pitch", "Reverb", "Bass Boost")
         self.filter_menu.pack(pady=10)
 
         # Apply Filter Button
@@ -40,13 +45,23 @@ class VoiceModifierApp:
         self.save_button = tk.Button(self.root, text="Save Audio", command=self.save_audio)
         self.save_button.pack(pady=10)
 
+    def select_audio_file(self):
+        """Allows the user to select an existing audio file."""
+        file_path = filedialog.askopenfilename(
+            title="Select Audio File",
+            filetypes=[("Audio Files", "*.wav *.mp3 *.ogg")]
+        )
+        if file_path:
+            self.audio_file = file_path
+            print(f"Selected file: {self.audio_file}")
+
     def start_recording(self):
         visualize_audio_live()
 
     def apply_filter(self):
-        """Applies the selected filter to the recorded audio."""
+        """Applies the selected filter to the recorded or selected audio."""
         if not self.audio_file:
-            print("Please record audio first.")
+            print("Please select or record an audio file first.")
             return
 
         selected_filter = self.filter_var.get()
