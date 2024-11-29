@@ -75,27 +75,32 @@ def update_plot(frame):
 
 
 def save_audio_to_file():
-    """Save the recorded audio data to a file."""
-    global recording_data
+    """Save the recorded audio data to a file and return the path."""
+    global recording_data, freq  # Ensure these are properly defined
 
     if not recording_data:
         print("No audio data to save!")
-        return
+        return None
 
-    # Combine the recorded audio chunks
     audio_array = np.concatenate(recording_data, axis=0)
 
-    # Ask the user for the save location
     root = tk.Tk()
-    root.withdraw()
+    root.withdraw()  # Hide the Tkinter GUI window
     output_path = filedialog.asksaveasfilename(defaultextension=".wav",
                                                filetypes=[("WAV Files", "*.wav")])
+    root.destroy()  # Close the Tkinter window
 
-    if output_path:
-        write(output_path, freq, audio_array)
+    if not output_path:
+        print("Save operation cancelled by user.")
+        return None
+
+    try:
+        write(output_path, freq, audio_array)  # Save the file
         print(f"Recording saved to {output_path}")
-    else:
-        print("Save operation cancelled.")
+        return output_path
+    except Exception as e:
+        print(f"Failed to save recording: {e}")
+        return None
 
 
 def start_recording():
