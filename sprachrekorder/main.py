@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 from audio_filters import apply_filter  # Custom utility functions
 from visualization import visualize_audio_live  # Optional visualization functions
+from visualization import save_audio_to_file
 
 
 class VoiceModifierApp:
@@ -12,6 +13,7 @@ class VoiceModifierApp:
         # Initialize variables
         self.audio_file = None
         self.modified_audio_file = None
+        self.modified_audio_file = "modified_audio.wav"
 
         # GUI Layout
         self.create_widgets()
@@ -50,6 +52,7 @@ class VoiceModifierApp:
         file_path = filedialog.askopenfilename(
             title="Select Audio File",
             filetypes=[("Audio Files", "*.wav *.mp3 *.ogg")]
+
         )
         if file_path:
             self.audio_file = file_path
@@ -59,13 +62,21 @@ class VoiceModifierApp:
         visualize_audio_live()
 
     def apply_filter(self):
-        """Applies the selected filter to the recorded or selected audio."""
-        if not self.audio_file:
-            print("Please select or record an audio file first.")
+        """Applies the selected filter to a newly recorded audio."""
+        if not self.audio_file:  # Check if there's already a path stored 
+            print("Recording new audio file...")
+            self.audio_file = save_audio_to_file()  # Save and retrieve new recording
+
+        if not self.audio_file:  # Check if the recording was successful
+            print("Recording failed or was cancelled.")
             return
 
-        selected_filter = self.filter_var.get()
-        self.modified_audio_file = "modified_audio.wav"  # Temp path for modified audio
+        selected_filter = self.filter_var.get()  # Retrieve the filter type from an attribute
+        if not selected_filter:
+            print("No filter selected.")
+            return
+
+        print(f"Applying '{selected_filter}' filter...")
         apply_filter(self.audio_file, self.modified_audio_file, selected_filter)
         print(f"Filter '{selected_filter}' applied and saved to {self.modified_audio_file}.")
 
