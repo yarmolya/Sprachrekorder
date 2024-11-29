@@ -1,10 +1,23 @@
+import os
 from pydub import AudioSegment, effects
 import numpy as np
 from scipy.signal import lfilter, butter
+from visualization import save_audio_to_file
+
 
 def apply_filter(input_file, output_file, filter_name):
     """Applies the selected filter to the audio."""
-    audio = AudioSegment.from_file(input_file)
+    print("Loading audio from:", input_file)
+    if os.path.exists(input_file):
+        print("File exists. Proceeding with loading...")
+    else:
+        print("File does not exist. Check path or permissions.")
+
+    try:
+        audio = AudioSegment.from_file(input_file)
+        print("File loaded successfully.")
+    except Exception as e:
+        print(f"Failed to load file: {e}")
 
     if filter_name == "Robot":
         # Apply a low-pass filter to smooth out harsh sounds (optional, can adjust cutoff)
