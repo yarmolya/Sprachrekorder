@@ -1,8 +1,8 @@
+import math
 import os
 from pydub import AudioSegment, effects
 import numpy as np
 from scipy.signal import lfilter, butter
-from visualization import save_audio_to_file
 
 
 def apply_filter(input_file, output_file, filter_name):
@@ -20,33 +20,43 @@ def apply_filter(input_file, output_file, filter_name):
         print(f"Failed to load file: {e}")
 
     if filter_name == "Robot":
-        # Apply a low-pass filter to smooth out harsh sounds (optional, can adjust cutoff)
-        audio = effects.low_pass_filter(audio, cutoff=1000)
+        octaves=-0.5
+        mod_frequency=50
+        
+        # Step 1: Lower the pitch
+        new_sample_rate = int(audio.frame_rate * (2 ** octaves))
+        pitched_audio = audio._spawn(audio.raw_data, overrides={"frame_rate": new_sample_rate}).set_frame_rate(audio.frame_rate)
+        
+        # Step 2: Apply smooth amplitude modulation
+        samples = np.array(pitched_audio.get_array_of_samples(), dtype=np.float32)
+        sine_wave = np.sin(2 * np.pi * mod_frequency / pitched_audio.frame_rate * np.arange(len(samples)))
+        modulated_samples = samples * (0.5 + 0.5 * sine_wave)  # Mild modulation to avoid distortion
 
-        # Modulate the audio to create a robotic effect
-        samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+        # Prevent clipping by normalizing the modulated signal
+        max_amplitude = np.max(np.abs(modulated_samples))
+        if max_amplitude > 0:
+            modulated_samples = (modulated_samples / max_amplitude) * (2**15 - 1)
 
-        # Generate a sine wave (modulation) at 50Hz (or a different frequency for stronger effect)
-        mod_frequency = 50  # Hz, adjust for more/less robot effect
-        sine_wave = np.sin(2 * np.pi * mod_frequency / audio.frame_rate * np.arange(len(samples)))
-
-        # Apply modulation: element-wise multiplication (mild distortion)
-        modulated_samples = samples * sine_wave
-
-        # Prevent clipping by scaling back the values and applying soft clipping if necessary
-        modulated_samples = np.clip(modulated_samples, -2**15, 2**15-1)
-
-        # Convert the samples back to 16-bit format
         modulated_samples = modulated_samples.astype(np.int16)
 
-        # Create the modulated AudioSegment from the new samples
-        audio = audio._spawn(modulated_samples.tobytes()).set_frame_rate(audio.frame_rate)
+        # Step 3: Re-spawn the audio with modulated samples
+        audio = pitched_audio._spawn(modulated_samples.tobytes())
+
+        # Step 4: Add compression for a smoother, more controlled sound
+        audio = effects.compress_dynamic_range(audio, threshold=-20.0, ratio=4.0)
+        
 
     elif filter_name == "Echo":
         # Overlay audio with itself to create a rich, clear echo effect
-        delay_ms = 300  # Delay in ms
-        echo = audio - 10  # Reduce volume of echo
-        audio = audio.overlay(echo, delay=delay_ms)
+        delay_ms=300
+        decay_factor=-10
+        echo = audio - abs(decay_factor)  # Apply volume reduction (in dB)
+    
+        # Apply delay (overlay the original audio with the delayed echo)
+        audio = audio.overlay(echo, delay_ms)
+        
+        # Optional: Add a fade-in and fade-out to the echo for smoother transition
+        audio = audio.fade_in(50).fade_out(150)  
 
     elif filter_name == "High Pitch":
         # Pitch shift up: Adjust playback speed to higher without distortion
@@ -55,23 +65,42 @@ def apply_filter(input_file, output_file, filter_name):
         audio = audio._spawn(audio.raw_data, overrides={"frame_rate": new_sample_rate}).set_frame_rate(audio.frame_rate)
 
     elif filter_name == "Reverb":
-        # Add reverb using feedback-style overlay
-        delay_ms = 100
-        reflections = audio - 5  # Slightly softer reflections
-        for _ in range(3):  # Simulate multiple reflections
-            reflections = reflections.overlay(audio, delay=delay_ms)
-            delay_ms += 50  # Increment delay each time
-        audio = reflections
-
+        initial_delay_ms=20
+        decay_factor=-5
+        reflections_count=10
+        max_reflection_delay=150
+        reflections = audio  # Start with the original audio
+    
+        delay_ms = initial_delay_ms  # Initial delay for the first reflection
+        
+        for i in range(reflections_count):
+            # Create a quieter reflection
+            reflection = audio - abs(decay_factor * (i + 1))  # Decrease volume more for each reflection
+            
+            # Overlay the original audio with the reflection with a delay
+            reflections = reflections.overlay(reflection, delay_ms)
+            
+            # Gradually increase the delay to simulate distant reflections
+            delay_ms = min(delay_ms + 20, max_reflection_delay)  # Delay increases but does not exceed max
+            
+            # Optionally apply a small fade to each reflection to smooth transitions (can be adjusted)
+            audio = reflections.fade_in(20).fade_out(50)  # Short fade-in and fade-out
+        
+        
     elif filter_name == "Bass Boost":
-        # Boost low frequencies using a low-shelf filter
-        def bass_boost(audio, gain_db=10, cutoff=100):
-            samples = np.array(audio.get_array_of_samples())
-            b, a = butter(1, cutoff / (audio.frame_rate / 2), btype="low")
-            boosted = lfilter(b, a, samples) * (10 ** (gain_db / 20))
-            return audio._spawn(boosted.astype(np.int16).tobytes())
+        speed_factor=1.2
+        bass_boost_factor=1.5
+        # Slow down the audio by adjusting the frame rate
+        new_frame_rate = int(audio.frame_rate / speed_factor)
+        slowed_audio = audio._spawn(audio.raw_data, overrides={"frame_rate": new_frame_rate})
+        
+        # Apply a slight bass boost: Boost the low-end frequencies
+        slowed_audio = slowed_audio.low_pass_filter(150)  # Keep only the bass frequencies below 150 Hz
+        
+        # Amplify the entire track to boost bass perception
+        audio = slowed_audio + bass_boost_factor  # Increase the volume slightly to boost bass perception
 
-        audio = bass_boost(audio)
+
 
     # Export the modified audio to a new file
     audio.export(output_file, format="wav")
