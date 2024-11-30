@@ -1,8 +1,9 @@
+import os
 import tkinter as tk
 from tkinter import filedialog
 from audio_filters import apply_filter  # Custom utility functions
 from visualization import visualize_audio_live  # Optional visualization functions
-from visualization import save_audio_to_file
+from visualization import save_audio_autom_to_file
 
 
 class VoiceModifierApp:
@@ -61,25 +62,35 @@ class VoiceModifierApp:
     def start_recording(self):
         visualize_audio_live()
 
-    def apply_filter(self):
-        """Applies the selected filter to a newly recorded audio."""
-        if not self.audio_file:  # Check if there's already a path stored 
+    def apply_filter(self):    
+        if not self.audio_file:  # Ensure audio file path exists
             print("Recording new audio file...")
-            self.audio_file = save_audio_to_file()  # Save and retrieve new recording
+            self.audio_file = save_audio_autom_to_file()  # Save and retrieve new recording
 
         if not self.audio_file:  # Check if the recording was successful
             print("Recording failed or was cancelled.")
             return
 
-        selected_filter = self.filter_var.get()  # Retrieve the filter type from an attribute
-        if not selected_filter:
+        selected_filter = self.filter_var.get()  # Retrieve selected filter
+        if not selected_filter or selected_filter == "None":
             print("No filter selected.")
             return
 
+        temp_recording = self.audio_file  # Keep track of original recording
+        self.modified_audio_file = "modified_audio.wav"
+
         print(f"Applying '{selected_filter}' filter...")
         apply_filter(self.audio_file, self.modified_audio_file, selected_filter)
-        print(f"Filter '{selected_filter}' applied and saved to {self.modified_audio_file}.")
 
+        # Optionally delete the original recording to prevent duplication
+        if temp_recording and temp_recording != "modified_audio.wav":
+            print(f"Deleting temporary file: {temp_recording}")
+            try:
+                os.remove(temp_recording)
+            except OSError as e:
+                print(f"Error deleting file: {e}")
+
+        
     def play_audio(self):
         """Plays the modified audio file."""
         if not self.modified_audio_file:
