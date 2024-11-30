@@ -13,7 +13,6 @@ class VoiceModifierApp:
 
         # Initialize variables
         self.audio_file = None
-        self.modified_audio_file = None
         self.modified_audio_file = "modified_audio.wav"
 
         # GUI Layout
@@ -33,8 +32,28 @@ class VoiceModifierApp:
         self.filter_label.pack()
         self.filter_var = tk.StringVar(self.root)
         self.filter_var.set("None")  # Default option
-        self.filter_menu = tk.OptionMenu(self.root, self.filter_var, "None", "Robot", "Echo", "High Pitch", "Reverb", "Bass Boost")
+        self.filter_menu = tk.OptionMenu(self.root, self.filter_var, "None", "Robot", "Echo", "High Pitch", "Reverb", "Bass Boost", "Custom", command=self.on_filter_change)
         self.filter_menu.pack(pady=10)
+
+        # Custom Filter Parameters (Initially Hidden)
+        self.custom_frame = tk.Frame(self.root)
+        self.slider1_label = tk.Label(self.custom_frame, text="Speed:")
+        self.slider1_label.pack()
+        self.slider1 = tk.Scale(self.custom_frame, from_=0, to=100, orient='horizontal')
+        self.slider1.pack()
+
+        self.slider2_label = tk.Label(self.custom_frame, text="Volume:")
+        self.slider2_label.pack()
+        self.slider2 = tk.Scale(self.custom_frame, from_=0, to=100, orient='horizontal')
+        self.slider2.pack()
+
+        self.slider3_label = tk.Label(self.custom_frame, text="Reverse:")
+        self.slider3_label.pack()
+        self.slider3 = tk.Scale(self.custom_frame, from_=0, to=100, orient='horizontal')
+        self.slider3.pack()
+
+        self.custom_frame.pack(pady=10)
+        self.custom_frame.pack_forget()  # Hide initially
 
         # Apply Filter Button
         self.apply_filter_button = tk.Button(self.root, text="Apply Filter", command=self.apply_filter)
@@ -47,6 +66,13 @@ class VoiceModifierApp:
         # Save Button
         self.save_button = tk.Button(self.root, text="Save Audio", command=self.save_audio)
         self.save_button.pack(pady=10)
+
+    def on_filter_change(self, selected_filter):
+        """Show custom sliders only when 'Custom' filter is selected."""
+        if selected_filter == "Custom":
+            self.custom_frame.pack(pady=10)  # Show custom frame
+        else:
+            self.custom_frame.pack_forget()  # Hide custom frame
 
     def select_audio_file(self):
         """Allows the user to select an existing audio file."""
@@ -62,7 +88,7 @@ class VoiceModifierApp:
     def start_recording(self):
         visualize_audio_live()
 
-    def apply_filter(self):    
+    def apply_filter(self):
         if not self.audio_file:  # Ensure audio file path exists
             print("Recording new audio file...")
             self.audio_file = save_audio_autom_to_file()  # Save and retrieve new recording
@@ -71,26 +97,22 @@ class VoiceModifierApp:
             print("Recording failed or was cancelled.")
             return
 
-        selected_filter = self.filter_var.get()  # Retrieve selected filter
+        selected_filter = self.filter_var.get()
+        
         if not selected_filter or selected_filter == "None":
             print("No filter selected.")
             return
 
-        temp_recording = self.audio_file  # Keep track of original recording
-        self.modified_audio_file = "modified_audio.wav"
+        if selected_filter == "Custom":
+            param1 = self.slider1.get()
+            param2 = self.slider2.get()
+            param3 = self.slider3.get()
+            print(f"Applying custom filter with parameters: {param1}, {param2}, {param3}")
+            apply_filter(self.audio_file, self.modified_audio_file, selected_filter, param1, param2, param3)
+        else:
+            print(f"Applying '{selected_filter}' filter...")
+            apply_filter(self.audio_file, self.modified_audio_file, selected_filter)
 
-        print(f"Applying '{selected_filter}' filter...")
-        apply_filter(self.audio_file, self.modified_audio_file, selected_filter)
-
-        # Optionally delete the original recording to prevent duplication
-        if temp_recording and temp_recording != "modified_audio.wav":
-            print(f"Deleting temporary file: {temp_recording}")
-            try:
-                os.remove(temp_recording)
-            except OSError as e:
-                print(f"Error deleting file: {e}")
-
-        
     def play_audio(self):
         """Plays the modified audio file."""
         if not self.modified_audio_file:
