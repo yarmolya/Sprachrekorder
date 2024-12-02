@@ -7,14 +7,16 @@ from visualization import visualize_audio_live, save_audio_to_file
 from pydub.playback import play
 from pydub import AudioSegment
 from playsound import playsound #switching from pydub to playsound due to access issues
+from playback_visualization import AudioPlotter 
+
 
 
 class VoiceModifierApp:
     CUSTOM_FILTERS_FILE = "custom_filters.json"
-
     def __init__(self, root):
         self.root = root
         self.root.title("Voice Recorder and Modifier")
+        self.audio_plotter = AudioPlotter(root)
 
         # Initialize variables
         self.audio_file = None
@@ -121,12 +123,12 @@ class VoiceModifierApp:
             filetypes=[("Audio Files", "*.wav *.mp3 *.ogg")]
         )
         if file_path:
-            """handling inconsistencies between mac and windows os"""
             self.audio_file = os.path.normpath(file_path) 
             print(f"Selected file: {self.audio_file}")
+            self.audio_plotter.play_audio_with_plot(file_path)
 
     def start_recording(self):
-        visualize_audio_live()
+        visualize_audio_live(self.audio_plotter)
     
     def apply_filter(self):
         if not self.audio_file:
