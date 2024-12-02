@@ -3,7 +3,10 @@ import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 import json
 from audio_filters import apply_filter
-from visualization import visualize_audio_live, save_audio_autom_to_file
+from visualization import visualize_audio_live, save_audio_to_file
+from pydub.playback import play
+from pydub import AudioSegment
+from playsound import playsound #switching from pydub to playsound due to access issues
 
 
 class VoiceModifierApp:
@@ -15,7 +18,7 @@ class VoiceModifierApp:
 
         # Initialize variables
         self.audio_file = None
-        self.modified_audio_file = "modified_audio.wav"
+        self.modified_audio_file = os.path.join(os.getcwd(), "modified_audio.wav")
         self.custom_filters = self.load_custom_filters()
 
         # GUI Layout
@@ -118,7 +121,8 @@ class VoiceModifierApp:
             filetypes=[("Audio Files", "*.wav *.mp3 *.ogg")]
         )
         if file_path:
-            self.audio_file = file_path
+            """handling inconsistencies between mac and windows os"""
+            self.audio_file = os.path.normpath(file_path) 
             print(f"Selected file: {self.audio_file}")
 
     def start_recording(self):
@@ -127,7 +131,7 @@ class VoiceModifierApp:
     def apply_filter(self):
         if not self.audio_file:
             print("Recording new audio file...")
-            self.audio_file = save_audio_autom_to_file()
+            self.audio_file = save_audio_to_file()
 
         if not self.audio_file:
             print("Recording failed or was cancelled.")
@@ -190,12 +194,14 @@ class VoiceModifierApp:
         if not self.modified_audio_file:
             print("No modified audio to play.")
             return
-        from pydub.playback import play
-        from pydub import AudioSegment
 
-        audio = AudioSegment.from_file(self.modified_audio_file)
-        print("Playing modified audio...")
-        play(audio)
+        try:
+            self.modified_audio_file = self.modified_audio_file.replace("\\", "/")
+            playsound(self.modified_audio_file)
+            print("Playing modified audio...")
+        except Exception as e:
+            print(f"An error occurred while trying to play the audio: {e}")
+
 
     def save_audio(self):
         if not self.modified_audio_file:
