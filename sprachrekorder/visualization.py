@@ -119,19 +119,49 @@ def stop_recording():
     save_audio_to_file()  # Save the recorded audio to a file
 
 
-def visualize_audio_live():
+def visualize_audio_live(audio_plotter):
     """Run the audio visualization and manage recording."""
     global is_recording
+    is_recording = False
+
+    # Settings for audio and plot
+    samplerate = 44100
+    chunk_size = 1024
+    audio_buffer = np.zeros(chunk_size * 10)
+
+    def audio_callback(indata, frames, time, status):
+        """Audio callback to fill the buffer with live audio data."""
+        nonlocal audio_buffer
+        audio_buffer = np.roll(audio_buffer, -frames)
+        audio_buffer[-frames:] = indata[:, 0]
+
+    def update_plot(frame):
+        """Update the plot with live audio data."""
+        audio_plotter.line.set_ydata(audio_buffer)
+        audio_plotter.line.set_xdata(np.linspace(0, len(audio_buffer) / samplerate, len(audio_buffer)))
+        audio_plotter.ax.set_ylim(-0.5, 0.5)
+        audio_plotter.canvas.draw_idle()
+        return audio_plotter.line,
+
+    def start_recording():
+        """Start audio recording."""
+        global is_recording
+        is_recording = True
+
+    def stop_recording():
+        """Stop audio recording."""
+        global is_recording
+        is_recording = False
 
     def toggle_recording(event):
         """Toggle recording on or off with a button click."""
         if is_recording:
             stop_recording()
-            record_button.label.set_text("Start Recording")  # Update button text
+            print("Recording stopped.")
         else:
             start_recording()
-            record_button.label.set_text("Stop Recording")  # Update button text
-
+            print("Recording started.")
+        
     ani = FuncAnimation(fig, update_plot, interval=interval, blit=True)
 
     # Add a button to start/stop recording
