@@ -145,6 +145,7 @@ class VoiceModifierApp:
         if file_path:
             self.audio_file = os.path.normpath(file_path)
             print(f"Selected file: {self.audio_file}")
+            playsound(self.audio_file)
             
             # Load the audio file
         
